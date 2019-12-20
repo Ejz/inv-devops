@@ -20,14 +20,19 @@ function isObject(o) {
 }
 
 function isDirectory(dir) {
-    return fs.lstatSync(dir).isDirectory();
+    return dir ? fs.lstatSync(dir).isDirectory() : false;
 }
 
 function isFile(file) {
-    return fs.lstatSync(file).isFile();
+    return file ? fs.lstatSync(file).isFile() : false;
 }
 
 const sprintf = util.format;
+
+function to(p) {
+    p = p.then ? p : Promise.resolve(p);
+    return p.then(data => [null, data]).catch(err => [err, null]);
+}
 
 function inherits(B, A) {
     let b = isFunction(B) ? new B() : B;
@@ -184,6 +189,41 @@ function inventory(inv, roles) {
     return inv;
 }
 
+function annotations(file) {
+    let content = isFile(file) ? String(fs.readFileSync(file)) : file;
+    let regex1   = /\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/g;
+    let regex2 = /@(.*)\((.*)\)/g;
+    let lines = content.match(regex1) || [];
+    let collect = {class: {}, methods: {}};
+    for (let line of lines) {
+        let t, k, v, c = {};
+        while (t = regex2.exec(line)) {
+            [, k, v] = t;
+            c[k] = k == 'Class' ? true : JSON.parse(v);
+        }
+        if (c.Class) {
+            delete c.Class;
+            collect.class = c;
+        } else if (c.Method) {
+            let m = c.Method;
+            delete c.Method;
+            collect.methods[m] = c;
+        }
+    }
+    return collect;
+}
+
+function getObjectsFromInventory(inv, role, pattern) {
+    pattern = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$', 'i');
+    let objects = [];
+    let entries = Object.entries(inv);
+    entries = entries.filter(([k, v]) => pattern.test(k) && v.roles.includes(role));
+    for (let [k, v] of entries) {
+        objects.push(new role(k, cloneDeep(v)));
+    }
+    return objects;
+}
+
 module.exports = {
     isString,
     isFunction,
@@ -193,10 +233,13 @@ module.exports = {
     isFile,
     sprintf,
     inherits,
+    to,
     esc,
     rand,
     nsplit,
     mustache,
     mustachify,
     inventory,
+    annotations,
+    getObjectsFromInventory,
 }

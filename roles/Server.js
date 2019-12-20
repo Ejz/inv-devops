@@ -1,11 +1,12 @@
 const fs = require('fs');
 
 class Server {
-    constructor(name, values, deps = {}) {
+    constructor(name, values) {
         this.name = name;
         this.values = values;
-        this.deps = deps;
     }
 }
+
+Server.file = __filename;
 
 module.exports = Server;

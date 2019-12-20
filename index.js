@@ -1,38 +1,88 @@
 const minimist = require('minimist');
-const _ = require('./helpers');
 const fs = require('fs');
+
+const C = require('./helpers');
+const _ = require('./constants');
+
+let rolesDir = C.ROOT + '/roles';
 
 let registered = [];
 
-function execute(inventory, argv) {
-    inventory = _.inventory(inventory);
-    argv = minimist(argv);
-    console.log(inventory);
-    console.log(argv);
-    console.log(registered);
-}
+let roles = {};
 
 function register(smth) {
     if (_.isFunction(smth)) {
         registered.push(smth);
     } else if (_.isDirectory(smth)) {
-        fs.readdirSync(smth).filter(f => _.isFile(f)).forEach(f => {
-            registered.push(require(f));
+        fs.readdirSync(smth).forEach(f => {
+            f = [smth, f].join('/');
+            if (_.isFile(f)) {
+                registered.push(require(f));
+            }
         });
     }
 }
 
-let roles = {
-    get Local() {
-        return require('./roles/Local');
-    },
-    get Server() {
-        return require('./roles/Server');
-    },
-    get Certificate() {
-        return require('./roles/Certificate');
-    },
-};
+register(rolesDir);
+
+fs.readdirSync(rolesDir).forEach(f => {
+    roles[f.replace('.js', '')] = require([rolesDir, f].join('/'));
+});
+
+async function execute(inventory, argv) {
+    inventory = _.inventory(inventory, registered);
+    argv = minimist(argv);
+    let command = argv._.pop();
+    if (command === undefined) {
+        throw C.ERROR_NO_ROLE;
+    }
+    command = command.split(':');
+    if (command.length != 2) {
+        throw _.sprintf(C.ERROR_INVALID_ROLE, command.join(':'));
+    }
+    let found;
+    let [role, method] = command;
+    found = registered.find(r => r.name.toLowerCase() === role.toLowerCase());
+    if (found === undefined) {
+        throw _.sprintf(C.ERROR_INVALID_ROLE, role);
+    }
+    role = found;
+    let as = await _.annotations(role.file);
+    found = Object.keys(as.methods).find(m => m.toLowerCase() === method.toLowerCase());
+    if (found === undefined) {
+        throw _.sprintf(C.ERROR_INVALID_METHOD, method);
+    }
+    method = found;
+    let objects;
+    if (as.class.isStatic) {
+        objects = _.getObjectsFromInventory(inventory, role, '*');
+        if (!objects.length) {
+            throw _.sprintf(C.ERROR_NO_STATIC_ROLE, role.name);
+        }
+        if (objects.length > 1) {
+            throw _.sprintf(C.ERROR_JUST_ONE_STATIC_ROLE, Object.keys(objects).join(', '));
+        }
+    } else {
+        let pattern = argv._.pop();
+        if (pattern === undefined) {
+            throw C.ERROR_NO_PATTERN;
+        }
+        objects = _.getObjectsFromInventory(inventory, role, pattern);
+    }
+    objects.forEach(async object => {
+        let requires = {};
+        for (let r of (as.methods[method].requires || [])) {
+            let {alias, role, pattern} = r;
+            found = registered.find(r => r.name.toLowerCase() === role.toLowerCase());
+            if (found === undefined) {
+                throw '!';
+            }
+            role = found;
+            requires[alias] = _.getObjectsFromInventory(inventory, role, pattern);
+        }
+        await _.to(object[method](requires, argv));
+    });
+}
 
 module.exports = {
     register,
