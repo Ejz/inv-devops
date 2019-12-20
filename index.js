@@ -1,8 +1,8 @@
 const minimist = require('minimist');
 const fs = require('fs');
 
-const C = require('./helpers');
-const _ = require('./constants');
+const _ = require('./helpers');
+const C = require('./constants');
 
 let rolesDir = C.ROOT + '/roles';
 
@@ -39,38 +39,38 @@ async function execute(inventory, argv) {
     argv = minimist(argv);
     let command = argv._.pop();
     if (command === undefined) {
-        throw C.ERROR_NO_ROLE;
+        throw new C.InvError(C.ERROR_NO_ROLE);
     }
     command = command.split(':');
     if (command.length != 2) {
-        throw _.sprintf(C.ERROR_INVALID_ROLE, command.join(':'));
+        throw new C.InvError(_.sprintf(C.ERROR_INVALID_ROLE, command.join(':')));
     }
     let found;
     let [role, method] = command;
     found = registered.find(r => r.name.toLowerCase() == role.toLowerCase());
     if (found === undefined) {
-        throw _.sprintf(C.ERROR_INVALID_ROLE, role);
+        throw new C.InvError(_.sprintf(C.ERROR_INVALID_ROLE, role));
     }
     role = found;
     let as = await _.annotations(role.file);
     found = Object.keys(as.methods).find(m => m.toLowerCase() == method.toLowerCase());
     if (found === undefined) {
-        throw _.sprintf(C.ERROR_INVALID_METHOD, method);
+        throw new C.InvError(_.sprintf(C.ERROR_INVALID_METHOD, method));
     }
     method = found;
     let objects;
     if (as.class.isStatic) {
         objects = _.getObjectsFromInventory(inventory, role, '*');
         if (!objects.length) {
-            throw _.sprintf(C.ERROR_NO_STATIC_ROLE, role.name);
+            throw new C.InvError(_.sprintf(C.ERROR_NO_STATIC_ROLE, role.name));
         }
         if (objects.length > 1) {
-            throw _.sprintf(C.ERROR_JUST_ONE_STATIC_ROLE, Object.keys(objects).join(', '));
+            throw new C.InvError(_.sprintf(C.ERROR_JUST_ONE_STATIC_ROLE, Object.keys(objects).join(', ')));
         }
     } else {
         let pattern = argv._.pop();
         if (pattern === undefined) {
-            throw C.ERROR_NO_PATTERN;
+            throw new C.InvError(C.ERROR_NO_PATTERN);
         }
         objects = _.getObjectsFromInventory(inventory, role, pattern);
     }
@@ -93,4 +93,5 @@ module.exports = {
     register,
     roles,
     execute,
+    InvError: C.InvError,
 };
