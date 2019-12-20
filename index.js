@@ -12,12 +12,17 @@ let roles = {};
 
 function register(smth) {
     if (_.isFunction(smth)) {
-        registered.push(smth);
+        let idx = registered.findIndex(r => r.name.toLowerCase() == smth.name.toLowerCase());
+        if (~idx) {
+            registered[idx] = smth;
+        } else {
+            registered.push(smth);
+        }
     } else if (_.isDirectory(smth)) {
         fs.readdirSync(smth).forEach(f => {
             f = [smth, f].join('/');
             if (_.isFile(f)) {
-                registered.push(require(f));
+                register(require(f));
             }
         });
     }
@@ -42,13 +47,13 @@ async function execute(inventory, argv) {
     }
     let found;
     let [role, method] = command;
-    found = registered.find(r => r.name.toLowerCase() === role.toLowerCase());
+    found = registered.find(r => r.name.toLowerCase() == role.toLowerCase());
     if (found === undefined) {
         throw _.sprintf(C.ERROR_INVALID_ROLE, role);
     }
     role = found;
     let as = await _.annotations(role.file);
-    found = Object.keys(as.methods).find(m => m.toLowerCase() === method.toLowerCase());
+    found = Object.keys(as.methods).find(m => m.toLowerCase() == method.toLowerCase());
     if (found === undefined) {
         throw _.sprintf(C.ERROR_INVALID_METHOD, method);
     }
@@ -73,7 +78,7 @@ async function execute(inventory, argv) {
         let requires = {};
         for (let r of (as.methods[method].requires || [])) {
             let {alias, role, pattern} = r;
-            found = registered.find(r => r.name.toLowerCase() === role.toLowerCase());
+            found = registered.find(r => r.name.toLowerCase() == role.toLowerCase());
             if (found === undefined) {
                 throw '!';
             }
