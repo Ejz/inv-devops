@@ -19,6 +19,14 @@ function isObject(o) {
     return (!!o) && (o.constructor === Object);
 }
 
+function isDirectory(dir) {
+    return fs.lstatSync(dir).isDirectory();
+}
+
+function isFile(file) {
+    return fs.lstatSync(file).isFile();
+}
+
 const sprintf = util.format;
 
 function inherits(B, A) {
@@ -155,7 +163,6 @@ function mustachify(object) {
 }
 
 function inventory(inv, roles) {
-    roles = isObject(roles) ? Object.values(roles) : roles;
     Object.keys(inv).forEach(k => {
         let v = cloneDeep(inv[k]);
         let array = isArray(v) ? v : [v];
@@ -182,6 +189,8 @@ module.exports = {
     isFunction,
     isArray,
     isObject,
+    isDirectory,
+    isFile,
     sprintf,
     inherits,
     esc,
