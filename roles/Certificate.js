@@ -1,9 +1,12 @@
 const fs = require('fs');
 
-class Certificate {
-    constructor(name, values) {
-        this.name = name;
-        this.values = values;
+const _ = require('../helpers');
+const Role = require('./Role');
+
+class Certificate extends Role {
+    constructor(...args) {
+        super(...args);
+        this.certificate = this.values.certificate || {};
     }
 }
 

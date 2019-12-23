@@ -1,64 +1,62 @@
 const _ = require('../helpers');
 
-const eq = (a, b) => expect(b).toStrictEqual(b);
-
 test('nsplit', () => {
     let str = _.nsplit('\n asd1 \n asd2  \n \n asd3 ');
-    eq(str, ['asd1', 'asd2', 'asd3']);
+    expect(str).toStrictEqual(['asd1', 'asd2', 'asd3']);
 });
 
 test('mustache', () => {
     let res;
     //
     res = _.mustache('hello {{world}}', {world: 'world'});
-    eq(res, 'hello world');
+    expect(res).toStrictEqual('hello world');
     //
     res = _.mustache('{{foo}} ! {{ bar }}', {});
-    eq(res, ' ! ');
+    expect(res).toStrictEqual(' ! ');
     //
     res = _.mustache('{{test}}', {test: '<&>'});
-    eq(res, '<&>');
+    expect(res).toStrictEqual('<&>');
     //
     res = _.mustache(['{{a}} {{b}}', '{{c}}'], {a: 1, b: 2, c: 3});
-    eq(res, ['1 2', '3']);
+    expect(res).toStrictEqual(['1 2', '3']);
     //
     res = _.mustache(['{{a}} {{b}}', '{{c.d}} {{x.y.z}}'], {a: 1, b: 2, c: {d: 3}});
-    eq(res, ['1 2', '3 ']);
+    expect(res).toStrictEqual(['1 2', '3 ']);
     //
     res = _.mustache({t: ['{{a}}'], tt: {ttt: '{{b}}'}, tttt: '{{c}}'}, {a: 1, b: 2, c: 3});
-    eq(res, {t: ['1'], tt: {ttt: '2'}, tttt: '3'});
+    expect(res).toStrictEqual({t: ['1'], tt: {ttt: '2'}, tttt: '3'});
     //
     res = _.mustache('{{0}}', ['hi']);
-    eq(res, 'hi');
+    expect(res).toStrictEqual('hi');
     //
     res = _.mustache('{{0.0}}', [['hi']]);
-    eq(res, 'hi');
+    expect(res).toStrictEqual('hi');
     //
     res = _.mustache('{{a.0}}', {a: ['hi']});
-    eq(res, 'hi');
+    expect(res).toStrictEqual('hi');
 });
 
 test('inventory', () => {
     let inv;
     //
     inv = _.inventory({k: {type: 't'}}, []);
-    eq(inv.k.roles, []);
+    expect(inv.k.roles).toStrictEqual([]);
     //
     inv = _.inventory({k: [
         {roles: ['r1']},
         {type: 't1', roles: ['r1', 'r2']},
         {type: 't2', roles: ['r3', 'r4']},
     ]}, ['r1', 'r2', 'r3']);
-    eq(inv.k.type, 't2');
-    eq(inv.k.roles, ['r1', 'r2', 'r3']);
+    expect(inv.k.type).toStrictEqual('t2');
+    expect(inv.k.roles).toStrictEqual(['r1', 'r2', 'r3']);
     //
     inv = _.inventory({k: {
         b: '{{c}}',
         a: '{{b}}',
         c: 1,
     }}, []);
-    eq(inv.k.a, '1');
-    eq(inv.k.b, '1');
+    expect(inv.k.a).toStrictEqual('1');
+    expect(inv.k.b).toStrictEqual('1');
     //
     let tpl = {
         inner: {
@@ -75,7 +73,7 @@ test('inventory', () => {
             {domain: 'siteb.com'},
         ],
     }, []);
-    eq(inv.k.inner.http, 'http://siteb.com');
+    expect(inv.k.inner.http).toStrictEqual('http://siteb.com');
 });
 
 test('inherits', () => {
@@ -83,27 +81,46 @@ test('inherits', () => {
     class B {}
     class C extends B {}
     class D extends C {}
-    eq(_.inherits(), false);
-    eq(_.inherits(A, B), false);
-    eq(_.inherits(B, A), false);
-    eq(_.inherits(D, B), true);
+    expect(_.inherits()).toStrictEqual(false);
+    expect(_.inherits(A, B)).toStrictEqual(false);
+    expect(_.inherits(B, A)).toStrictEqual(false);
+    expect(_.inherits(C, B)).toStrictEqual(true);
+    expect(_.inherits(D, B)).toStrictEqual(true);
 });
 
 test('mustachify', () => {
     let res;
     //
     res = _.mustachify({a: '{{b}}', b: '{{c}}', c: '1'});
-    eq(res, {a: '1', b: '1', c: '1'});
+    expect(res).toStrictEqual({a: '1', b: '1', c: '1'});
     //
     res = _.mustachify({a: ['{{b}}', '{{c}}'], b: '{{c}}', c: '1'});
-    eq(res, {a: ['1', '1'], b: '1', c: '1'});
+    expect(res).toStrictEqual({a: ['1', '1'], b: '1', c: '1'});
     //
     res = _.mustachify({a: '{{b}} {{c}} {{d}}', b: '{{c}} {{d}}', c: '{{d}}', d: '1'});
-    eq(res, {a: '1 1 1 1', b: '1 1', c: '1', d: '1'});
+    expect(res).toStrictEqual({a: '1 1 1 1', b: '1 1', c: '1', d: '1'});
     //
     res = _.mustachify({a: ['a1 {{c}}', 'a2 {{b}}'], b: 'b {{c}}', c: '0'});
-    eq(res, {a: ['a1 0', 'a2 b 0'], b: 'b 0', c: '0'});
+    expect(res).toStrictEqual({a: ['a1 0', 'a2 b 0'], b: 'b 0', c: '0'});
     //
     res = _.mustachify({a: '{{b.0}} {{b.1}}', b: ['1', '{{c}}'], c: '2'});
-    eq(res, {a: '1 2', b: ['1', '2'], c: '2'});
+    expect(res).toStrictEqual({a: '1 2', b: ['1', '2'], c: '2'});
+});
+
+test('annotations', () => {
+    let as;
+    as = _.annotations(`
+        /**
+         * @public
+         * @alias write_ssh_config
+         * @description Writes servers to your .ssh/config, use --servers [pattern]
+         */
+        async myMethod()
+    `);
+    expect(as).toStrictEqual({
+        myMethod: {
+            alias: 'write_ssh_config',
+            description: 'Writes servers to your .ssh/config, use --servers [pattern]',
+        },
+    });
 });

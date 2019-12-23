@@ -1,7 +1,10 @@
 const fs = require('fs');
+const path = require('path');
 const util = require('util');
 const Mustache = require('mustache');
 const cloneDeep = require('lodash.clonedeep');
+
+RegExp.escape = s => s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
 Mustache.escape = t => t;
 
@@ -20,11 +23,19 @@ function isObject(o) {
 }
 
 function isDirectory(dir) {
-    return dir ? fs.lstatSync(dir).isDirectory() : false;
+    try {
+        return fs.lstatSync(dir).isDirectory();
+    } catch (e) {
+        return false;
+    }
 }
 
 function isFile(file) {
-    return file ? fs.lstatSync(file).isFile() : false;
+    try {
+        return fs.lstatSync(file).isFile();
+    } catch (e) {
+        return false;
+    }
 }
 
 const sprintf = util.format;
@@ -35,11 +46,8 @@ function to(p) {
 }
 
 function inherits(B, A) {
-    let b = isFunction(B) ? new B() : B;
-    if (!isObject(B) || !isObject(A)) {
-        return false;
-    }
-    while (b && Object.getPrototypeOf(b) && A && A.prototype) {
+    let b = isFunction(B) ? new B('', {}) : B;
+    while (B && Object.getPrototypeOf(b) && A && A.prototype) {
         if (Object.getPrototypeOf(b) === A.prototype) {
             return true;
         }
@@ -53,12 +61,6 @@ function esc(s) {
         return s;
     }
     return _esc([s]);
-}
-
-function rand(min, max) {
-    min = parseInt(min);
-    max = parseInt(max);
-    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function nsplit(str) {
@@ -189,25 +191,37 @@ function inventory(inv, roles) {
     return inv;
 }
 
+function matchAll(regex, string) {
+    let idx = regex.lastIndex;
+    regex.lastIndex = 0;
+    let t, collect = [];
+    while (t = regex.exec(string)) {
+        collect.push(t);
+    }
+    regex.lastIndex = idx;
+    return collect;
+}
+
 function annotations(file) {
     let content = isFile(file) ? String(fs.readFileSync(file)) : file;
-    let regex1   = /\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/g;
-    let regex2 = /@(.*)\((.*)\)/g;
-    let lines = content.match(regex1) || [];
-    let collect = {class: {}, methods: {}};
-    for (let line of lines) {
-        let t, k, v, c = {};
-        while (t = regex2.exec(line)) {
-            [, k, v] = t;
-            c[k] = k == 'Class' ? true : JSON.parse(v);
+    let regex1 = /\/\*\*([\s\S]*?)\*\/\s*\n\s*([\s\S]*?)\n/g;
+    let regex2 = /(async\s+)?(\S+)\(/i;
+    let regex3 = /@(\S+)([^\n]+(.*?))?\n/g;
+    let t;
+    let collect = {};
+    for (let [, block, code] of matchAll(regex1, content)) {
+        let m = code.match(regex2) || [];
+        if (!m.length) {
+            continue;
         }
-        if (c.Class) {
-            delete c.Class;
-            collect.class = c;
-        } else if (c.Method) {
-            let m = c.Method;
-            delete c.Method;
-            collect.methods[m] = c;
+        let vars = {};
+        for (let [, key, value] of matchAll(regex3, block)) {
+            value = value === undefined ? true : value.trim();
+            vars[key] = value; 
+        }
+        if (vars.public) {
+            delete vars.public;
+            collect[m[2]] = vars;
         }
     }
     return collect;
@@ -224,6 +238,21 @@ function getObjectsFromInventory(inv, role, pattern) {
     return objects;
 }
 
+function readFile(file) {
+    return isFile(file) ? String(fs.readFileSync(file)) : '';
+}
+
+function writeFile(file, content) {
+    fs.mkdirSync(path.dirname(file), {recursive: true});
+    fs.writeFileSync(file, content);
+}
+
+function rand(min = 0, max = Number.MAX_SAFE_INTEGER) {
+    min = Number(min);
+    max = Number(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 module.exports = {
     isString,
     isFunction,
@@ -235,11 +264,14 @@ module.exports = {
     inherits,
     to,
     esc,
-    rand,
     nsplit,
     mustache,
     mustachify,
     inventory,
+    matchAll,
     annotations,
     getObjectsFromInventory,
+    readFile,
+    writeFile,
+    rand,
 }

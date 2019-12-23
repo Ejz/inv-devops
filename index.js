@@ -37,56 +37,66 @@ fs.readdirSync(rolesDir).forEach(f => {
 async function execute(inventory, argv) {
     inventory = _.inventory(inventory, registered);
     argv = minimist(argv);
-    let command = argv._.pop();
+    let command = argv._.shift();
     if (command === undefined) {
         throw new C.InvError(C.ERROR_NO_ROLE);
     }
-    command = command.split(':');
-    if (command.length != 2) {
-        throw new C.InvError(_.sprintf(C.ERROR_INVALID_ROLE, command.join(':')));
-    }
     let found;
-    let [role, method] = command;
+    command = command.split(':');
+    let role = command.shift();
     found = registered.find(r => r.name.toLowerCase() == role.toLowerCase());
     if (found === undefined) {
         throw new C.InvError(_.sprintf(C.ERROR_INVALID_ROLE, role));
     }
     role = found;
-    let as = await _.annotations(role.file);
-    found = Object.keys(as.methods).find(m => m.toLowerCase() == method.toLowerCase());
+    let as = _.annotations(role.file);
+    let method = command.join(':');
+    if (!method) {
+        let msg = [];
+        let pad = Math.max(...Object.keys(as).map(k => k.length));
+        let pattern = ` > ${role.name}:%s`;
+        let plen = pattern.length - 2;
+        for (let k of Object.keys(as)) {
+            let d = as[k].description;
+            let str = _.sprintf(pattern, k);
+            str += d ? ' '.repeat(pad + plen - str.length + 4) + d : '';
+            msg.push(str);
+        }
+        msg = role.name + (msg.length ? ('\n' + msg.join('\n')) : '');
+        throw new C.InvError(_.sprintf(C.ERROR_NO_METHOD, msg));
+    }
+    found = Object.keys(as).find(m => {
+        let alias = as[m].alias || '';
+        return [m.toLowerCase(), alias.toLowerCase()].includes(method.toLowerCase());
+    });
     if (found === undefined) {
         throw new C.InvError(_.sprintf(C.ERROR_INVALID_METHOD, method));
     }
     method = found;
     let objects;
-    if (as.class.isStatic) {
+    if (role.isSingleton) {
         objects = _.getObjectsFromInventory(inventory, role, '*');
         if (!objects.length) {
-            throw new C.InvError(_.sprintf(C.ERROR_NO_STATIC_ROLE, role.name));
+            throw new C.InvError(_.sprintf(C.ERROR_NO_SINGLETON_ROLE, role.name));
         }
         if (objects.length > 1) {
-            throw new C.InvError(_.sprintf(C.ERROR_JUST_ONE_STATIC_ROLE, Object.keys(objects).join(', ')));
+            let msg = _.sprintf(C.ERROR_JUST_ONE_SINGLETON_ROLE, Object.keys(objects).join(', '));
+            throw new C.InvError(msg);
         }
     } else {
-        let pattern = argv._.pop();
+        let pattern = argv._.shift();
         if (pattern === undefined) {
             throw new C.InvError(C.ERROR_NO_PATTERN);
         }
         objects = _.getObjectsFromInventory(inventory, role, pattern);
     }
-    objects.forEach(async object => {
-        let requires = {};
-        for (let r of (as.methods[method].requires || [])) {
-            let {alias, role, pattern} = r;
-            found = registered.find(r => r.name.toLowerCase() == role.toLowerCase());
-            if (found === undefined) {
-                throw '!';
-            }
-            role = found;
-            requires[alias] = _.getObjectsFromInventory(inventory, role, pattern);
+    await Promise.all(objects.map(async object => {
+        let quiet = argv.q;
+        let [err] = await _.to(object[method]({argv, inventory, quiet}));
+        if (err) {
+            throw err;
         }
-        await _.to(object[method](requires, argv));
-    });
+    }));
 }
 
 module.exports = {
