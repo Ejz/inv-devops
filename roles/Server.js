@@ -13,11 +13,11 @@ class Server extends Role {
     }
 
     get host() {
-        return this.server.host || 'localhost';
+        return this.server.host;
     }
 
     get ip() {
-        return this.server.ip || '127.0.0.1';
+        return this.server.ip;
     }
 
     get user() {

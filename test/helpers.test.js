@@ -5,6 +5,12 @@ test('nsplit', () => {
     expect(str).toStrictEqual(['asd1', 'asd2', 'asd3']);
 });
 
+test('isObject', () => {
+    expect(_.isObject({})).toBe(true);
+    expect(_.isObject(null)).toBe(false);
+    expect(_.isObject(undefined)).toBe(false);
+});
+
 test('mustache', () => {
     let res;
     //

@@ -172,16 +172,11 @@ function mustachify(object) {
 function inventory(inv, roles) {
     Object.keys(inv).forEach(k => {
         let v = cloneDeep(inv[k]);
-        let array = isArray(v) ? v : [v];
-        v = {};
-        array.forEach(a => {
-            let dump = v.roles || [];
-            v = {...v, ...a};
-            v.roles = dump.concat(v.roles || []);
-        });
+        v = isArray(v) ? v : [v];
+        v = v.reduce((a, c) => extend(a, c), {});
         let name = role => isFunction(role) ? role.name : role;
         let names = roles.map(name);
-        v.roles = v.roles.filter(role => names.includes(name(role)));
+        v.roles = (v.roles || []).filter(role => names.includes(name(role)));
         for (let role of v.roles.slice(0)) {
             v.roles = v.roles.concat(roles.filter(r => inherits(role, r)));
         }
@@ -253,6 +248,22 @@ function rand(min = 0, max = Number.MAX_SAFE_INTEGER) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function extend(a, b) {
+    if (isObject(a) && isObject(b)) {
+        let c = {};
+        let keys = Object.keys(a).concat(Object.keys(b));
+        keys = keys.filter((v, i, a) => a.indexOf(v) == i);
+        for (let key of keys) {
+            c[key] = extend(a[key], b[key]);
+        }
+        return c;
+    }
+    if (isArray(a) && isArray(b)) {
+        return a.concat(b);
+    }
+    return b === undefined ? a : b;
+}
+
 module.exports = {
     isString,
     isFunction,
@@ -274,4 +285,5 @@ module.exports = {
     readFile,
     writeFile,
     rand,
+    extend,
 }
