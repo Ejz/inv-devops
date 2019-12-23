@@ -1,4 +1,5 @@
 const _ = require('../helpers');
+const C = require('../constants');
 
 test('nsplit', () => {
     let str = _.nsplit('\n asd1 \n asd2  \n \n asd3 ');
@@ -129,4 +130,12 @@ test('annotations', () => {
             description: 'Writes servers to your .ssh/config, use --servers [pattern]',
         },
     });
+});
+
+test('readFile', () => {
+    let rnd = _.rand();
+    let file = C.TMPDIR + '/' + _.rand();
+    expect(_.readFile(file)).toBe('');
+    _.writeFile(file, rnd);
+    expect(_.readFile(file)).toBe(String(rnd));
 });

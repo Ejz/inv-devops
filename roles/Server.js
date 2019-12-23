@@ -24,6 +24,10 @@ class Server extends Role {
         return this.server.user || 'root';
     }
 
+    get key() {
+        return this.server.key;
+    }
+
     get port() {
         return this.server.port || '22';
     }

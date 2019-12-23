@@ -9,7 +9,7 @@ let inventory = {
         roles: [Local],
         local: {
             home: C.TMPDIR,
-            ssh_config: C.TMPDIR + '/.ssh/config',
+            ssh_config: '/.ssh/config',
         },
     },
     myserver: {
@@ -21,7 +21,7 @@ let inventory = {
 };
 
 test('Local:write_ssh_config', async () => {
-    let file = inventory.local.local.ssh_config;
+    let file = inventory.local.local.home + inventory.local.local.ssh_config;
     await inv.execute(inventory, ['Local:write_ssh_config', '-q', '--servers', '*']);
     let ex = inventory.myserver.server.host;
     let ne = 'server' + _.rand();

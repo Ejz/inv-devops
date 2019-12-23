@@ -17,7 +17,7 @@ class Local extends Role {
     }
 
     get ssh_config() {
-        return this.home + '/.ssh/config';
+        return this.local.ssh_config || '/.ssh/config';
     }
 
     /**
@@ -33,13 +33,14 @@ class Local extends Role {
         }
         let configs = servers.map(server => server.getSshConfig());
         let config = configs.join('\n');
-        let content = _.readFile(this.ssh_config);
+        let file = this.home + this.ssh_config;
+        let content = _.readFile(file);
         for (let server of servers) {
             content = content.replace(server.SSH_CONFIG_PREPEND_REGEX, '');
         }
-        content += config;
-        _.writeFile(this.ssh_config, content);
-        quiet || this.log(_.sprintf(this.SUCCESS_WRITE_SSH_CONFIG, this.ssh_config));
+        content = content ? content.trim() + '\n\n' + config : config;
+        _.writeFile(file, content);
+        quiet || this.log(_.sprintf(this.SUCCESS_WRITE_SSH_CONFIG, file));
     }
 }
 

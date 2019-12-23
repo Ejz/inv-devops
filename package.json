@@ -1,6 +1,6 @@
 {
     "name": "inv-devops",
-    "version": "1.0.10",
+    "version": "1.0.16",
     "description": "",
     "main": "index.js",
     "scripts": {

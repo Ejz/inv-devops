@@ -32,7 +32,8 @@ function isDirectory(dir) {
 
 function isFile(file) {
     try {
-        return fs.lstatSync(file).isFile();
+        let stat = fs.lstatSync(file);
+        return stat.isFile() || stat.isSymbolicLink();
     } catch (e) {
         return false;
     }
@@ -170,6 +171,9 @@ function mustachify(object) {
 }
 
 function inventory(inv, roles) {
+    if (isObject(roles)) {
+        roles = Object.entries(roles).map(([, v]) => v);
+    }
     Object.keys(inv).forEach(k => {
         let v = cloneDeep(inv[k]);
         v = isArray(v) ? v : [v];

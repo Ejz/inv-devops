@@ -4,38 +4,26 @@ const fs = require('fs');
 const _ = require('./helpers');
 const C = require('./constants');
 
-let rolesDir = C.ROOT + '/roles';
-
-let registered = [];
-
 let roles = {};
 
 function register(smth) {
     if (_.isFunction(smth)) {
-        let idx = registered.findIndex(r => r.name.toLowerCase() == smth.name.toLowerCase());
-        if (~idx) {
-            registered[idx] = smth;
-        } else {
-            registered.push(smth);
-        }
+        roles[smth.name] = smth;
     } else if (_.isDirectory(smth)) {
         fs.readdirSync(smth).forEach(f => {
+            let n = f.replace('.js', '');
             f = [smth, f].join('/');
             if (_.isFile(f)) {
-                register(require(f));
+                roles = {...roles, get [n]() { return require(f); }};
             }
         });
     }
 }
 
-register(rolesDir);
-
-fs.readdirSync(rolesDir).forEach(f => {
-    roles[f.replace('.js', '')] = require([rolesDir, f].join('/'));
-});
+register(C.ROOT + '/roles');
 
 async function execute(inventory, argv) {
-    inventory = _.inventory(inventory, registered);
+    inventory = _.inventory(inventory, roles);
     argv = minimist(argv);
     let command = argv._.shift();
     if (command === undefined) {
@@ -44,11 +32,11 @@ async function execute(inventory, argv) {
     let found;
     command = command.split(':');
     let role = command.shift();
-    found = registered.find(r => r.name.toLowerCase() == role.toLowerCase());
+    found = Object.keys(roles).find(r => r.toLowerCase() == role.toLowerCase());
     if (found === undefined) {
         throw new C.InvError(_.sprintf(C.ERROR_INVALID_ROLE, role));
     }
-    role = found;
+    role = roles[found];
     let as = _.annotations(role.file);
     let method = command.join(':');
     if (!method) {
@@ -101,7 +89,7 @@ async function execute(inventory, argv) {
 
 module.exports = {
     register,
-    roles,
     execute,
     InvError: C.InvError,
+    roles,
 };
