@@ -23,12 +23,13 @@ class Local extends Role {
     /**
      * @public
      * @alias write_ssh_config
-     * @description Writes servers to your .ssh/config, use --servers [pattern]
+     * @description Writes servers to .ssh/config, --servers [pattern]
      */
     async writeSshConfig({argv, inventory, quiet}) {
         let servers = this.select(inventory, Server, argv.servers);
         if (!servers.length) {
-            quiet || this.warn(_.sprintf(this.ERROR_NO_OBJECTS_OF_THIS_TYPE, Server.name));
+            let msg = _.sprintf(this.ERROR_NO_OBJECTS_OF_THIS_TYPE, Server.name);
+            this.warn(this.writeSshConfig.name, msg);
             return;
         }
         let configs = servers.map(server => server.getSshConfig());
@@ -40,7 +41,8 @@ class Local extends Role {
         }
         content = content ? content.trim() + '\n\n' + config : config;
         _.writeFile(file, content);
-        quiet || this.log(_.sprintf(this.SUCCESS_WRITE_SSH_CONFIG, file));
+        let msg = _.sprintf(this.SUCCESS_WRITE_SSH_CONFIG, file);
+        quiet || this.log(this.writeSshConfig.name, msg);
     }
 }
 

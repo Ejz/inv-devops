@@ -1,4 +1,5 @@
 const fs = require('fs');
+const child_process = require('child_process');
 
 const _ = require('../helpers');
 
@@ -27,6 +28,24 @@ class Role {
 
     select(inventory, role, select) {
         return _.getObjectsFromInventory(inventory, role, select);
+    }
+
+    exec(cmd, ...args) {
+        cmd = _.format(cmd, ...args);
+        this.log(this.exec.name, cmd);
+        return new Promise((res, rej) => {
+            child_process.exec(cmd, {
+                shell: '/bin/bash',
+                maxBuffer: 1E9,
+            }, (err, stdout, stderr) => {
+                if (!err) {
+                    res(stdout);
+                    return;
+                }
+                this.warn(this.exec.name, err.code, stderr.trim());
+                rej([[err.code, stdout, stderr]]);
+            });
+        });
     }
 }
 

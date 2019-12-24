@@ -59,7 +59,6 @@ class Server extends Role {
         }
         return this.SSH_CONFIG_PREPEND + '\n' + collect.join('\n') + '\n';
     }
-
 }
 
 Server.file = __filename;

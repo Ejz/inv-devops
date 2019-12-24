@@ -43,7 +43,7 @@ test('mustache', () => {
     expect(res).toStrictEqual('hi');
 });
 
-test('inventory', () => {
+test('inventory - 1', () => {
     let inv;
     //
     inv = _.inventory({k: {type: 't'}}, []);
@@ -81,6 +81,13 @@ test('inventory', () => {
         ],
     }, []);
     expect(inv.k.inner.http).toStrictEqual('http://siteb.com');
+});
+
+test.only('inventory - 2', () => {
+    let inv;
+    //
+    inv = _.inventory({k: {type: '+{{name}}+'}}, []);
+    expect(inv.k.type).toStrictEqual('+k+');
 });
 
 test('inherits', () => {

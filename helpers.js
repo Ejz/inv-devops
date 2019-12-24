@@ -185,7 +185,10 @@ function inventory(inv, roles) {
             v.roles = v.roles.concat(roles.filter(r => inherits(role, r)));
         }
         v.roles = v.roles.filter((v, i, a) => a.indexOf(v) == i);
-        inv[k] = mustachify(v);
+        v.name = k;
+        v = mustachify(v);
+        delete v.name;
+        inv[k] = v;
     });
     return inv;
 }
@@ -266,6 +269,16 @@ function extend(a, b) {
         return a.concat(b);
     }
     return b === undefined ? a : b;
+}
+
+function format(str, ...args) {
+    let r = /\?/g;
+    str = str.replace(/\s+/g, ' ').trim();
+    if ((str.match(r) || []).length > args.length) {
+        throw sprintf(C.ERROR_INVALID_FORMAT_ARGUMENTS, str);
+    }
+    str = str.replace(r, _ => esc(String(args.shift())));
+    return str;
 }
 
 module.exports = {

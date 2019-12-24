@@ -81,9 +81,7 @@ async function execute(inventory, argv) {
     await Promise.all(objects.map(async object => {
         let quiet = argv.q;
         let [err] = await _.to(object[method]({argv, inventory, quiet}));
-        if (err) {
-            throw err;
-        }
+        err && object.log('error!');
     }));
 }
 
